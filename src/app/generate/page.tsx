@@ -167,6 +167,7 @@ export default function GeneratePage() {
             <PostCardActions
               actorName={result.actorName}
               postText={result.postText}
+              headshotUrl={result.headshotUrl}
               cardRef={cardRef}
               onGenerateAnother={handleGenerateAnother}
             />
