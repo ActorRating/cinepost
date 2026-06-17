@@ -4,48 +4,71 @@ import { useState } from "react";
 import Link from "next/link";
 import { Check, Loader2, Sparkles } from "lucide-react";
 import { PLANS, type PlanType } from "@/lib/constants";
+import { isValidEmail, normalizeEmail } from "@/lib/email";
 
 const planKeys: PlanType[] = ["free", "pro", "agency"];
 
 export default function PricingPage() {
-  const [waitlistPlan, setWaitlistPlan] = useState<PlanType | null>(null);
-  const [email, setEmail] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [waitlistEmails, setWaitlistEmails] = useState<Record<"pro" | "agency", string>>({
+    pro: "",
+    agency: "",
+  });
+  const [fieldErrors, setFieldErrors] = useState<Record<"pro" | "agency", string>>({
+    pro: "",
+    agency: "",
+  });
+  const [loadingPlan, setLoadingPlan] = useState<"pro" | "agency" | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
   const handleWaitlist = async (plan: "pro" | "agency") => {
-    if (!email.trim()) {
-      setWaitlistPlan(plan);
-      setError("Enter your email to join the waitlist");
+    const email = normalizeEmail(waitlistEmails[plan]);
+
+    if (!email) {
+      setFieldErrors((prev) => ({ ...prev, [plan]: "Enter your email to join the waitlist" }));
       return;
     }
 
-    setLoading(true);
+    if (!isValidEmail(email)) {
+      setFieldErrors((prev) => ({
+        ...prev,
+        [plan]: "Please enter a valid email address",
+      }));
+      return;
+    }
+
+    setLoadingPlan(plan);
     setError("");
     setMessage("");
+    setFieldErrors((prev) => ({ ...prev, [plan]: "" }));
 
     try {
       const res = await fetch("/api/waitlist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim(), plan }),
+        body: JSON.stringify({ email, plan }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || "Something went wrong");
+        if (res.status === 400) {
+          setFieldErrors((prev) => ({
+            ...prev,
+            [plan]: data.error || "Please enter a valid email address",
+          }));
+        } else {
+          setError(data.error || "Something went wrong");
+        }
         return;
       }
 
       setMessage(data.message || "You're on the waitlist!");
-      setWaitlistPlan(null);
-      setEmail("");
+      setWaitlistEmails((prev) => ({ ...prev, [plan]: "" }));
     } catch {
       setError("Failed to join waitlist. Please try again.");
     } finally {
-      setLoading(false);
+      setLoadingPlan(null);
     }
   };
 
@@ -134,28 +157,39 @@ export default function PricingPage() {
                   </Link>
                 ) : (
                   <div className="space-y-3">
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => {
-                        setEmail(e.target.value);
-                        setWaitlistPlan(key);
-                        setError("");
-                      }}
-                      onFocus={() => setWaitlistPlan(key)}
-                      placeholder="you@example.com"
-                      className="input-cinema text-sm"
-                    />
+                    <div>
+                      <input
+                        type="email"
+                        value={waitlistEmails[key as "pro" | "agency"]}
+                        onChange={(e) => {
+                          setWaitlistEmails((prev) => ({
+                            ...prev,
+                            [key]: e.target.value,
+                          }));
+                          setFieldErrors((prev) => ({ ...prev, [key]: "" }));
+                          setError("");
+                        }}
+                        placeholder="you@example.com"
+                        className={`input-cinema text-sm ${
+                          fieldErrors[key as "pro" | "agency"]
+                            ? "border-red-500/50 focus:border-red-500/60 focus:ring-red-500/30"
+                            : ""
+                        }`}
+                      />
+                      {fieldErrors[key as "pro" | "agency"] && (
+                        <p className="text-xs text-red-400 mt-1.5">
+                          {fieldErrors[key as "pro" | "agency"]}
+                        </p>
+                      )}
+                    </div>
                     <button
-                      onClick={() => handleWaitlist(key)}
-                      disabled={loading && waitlistPlan === key}
+                      onClick={() => handleWaitlist(key as "pro" | "agency")}
+                      disabled={loadingPlan === key}
                       className={`w-full flex items-center justify-center gap-2 ${
                         isPopular ? "btn-gold" : "btn-outline"
                       }`}
                     >
-                      {loading && waitlistPlan === key && (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      )}
+                      {loadingPlan === key && <Loader2 className="w-4 h-4 animate-spin" />}
                       Join Waitlist
                     </button>
                   </div>

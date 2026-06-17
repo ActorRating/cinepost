@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { isValidEmail, normalizeEmail } from "@/lib/email";
 
 function getSupabaseAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -18,10 +19,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 });
     }
 
-    const normalizedEmail = email.trim().toLowerCase();
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(normalizedEmail)) {
-      return NextResponse.json({ error: "Invalid email address" }, { status: 400 });
+    const normalizedEmail = normalizeEmail(email);
+
+    if (!normalizedEmail) {
+      return NextResponse.json({ error: "Email is required" }, { status: 400 });
+    }
+
+    if (!isValidEmail(normalizedEmail)) {
+      return NextResponse.json({ error: "Please enter a valid email address" }, { status: 400 });
     }
 
     if (!plan || (plan !== "pro" && plan !== "agency")) {
@@ -39,7 +44,7 @@ export async function POST(request: Request) {
       if (error.code === "23505") {
         return NextResponse.json({
           success: true,
-          message: "You're already on the waitlist!",
+          message: "You're already on the waitlist",
         });
       }
       console.error("Waitlist insert error:", error);
