@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Sparkles, ImageIcon, Zap, Copy, Download } from "lucide-react";
+import { Sparkles, ImageIcon, Zap } from "lucide-react";
 
 export default function HomePage() {
   return (
@@ -133,15 +133,6 @@ export default function HomePage() {
                 sizes="(max-width: 768px) 100vw, 768px"
                 className="w-full h-auto block"
               />
-              {/* Action bar overlay */}
-              <div className="absolute bottom-0 left-0 right-0 flex items-center justify-end gap-2 px-5 py-3 bg-gradient-to-t from-black/70 to-transparent">
-                <button className="flex items-center gap-1.5 text-xs text-gray-400 bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/10 rounded-xl px-3 py-1.5 transition-colors">
-                  <Copy className="w-3 h-3" /> Copy
-                </button>
-                <button className="flex items-center gap-1.5 text-xs text-gray-400 bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/10 rounded-xl px-3 py-1.5 transition-colors">
-                  <Download className="w-3 h-3" /> Download
-                </button>
-              </div>
             </div>
           </div>
         </div>
