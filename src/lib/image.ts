@@ -7,6 +7,25 @@ export function getProxiedImageUrl(url: string | null | undefined): string {
   return `/api/image-proxy?url=${encodeURIComponent(url)}`;
 }
 
+/** Server-side: fetch a remote headshot and return an embeddable data URL. */
+export async function headshotUrlToDataUrl(url: string | null): Promise<string> {
+  if (!url) return PLACEHOLDER_HEADSHOT;
+  if (url.startsWith("data:")) return url;
+
+  try {
+    const res = await fetch(url, {
+      headers: { "User-Agent": "CinePost/1.0" },
+    });
+    if (!res.ok) return PLACEHOLDER_HEADSHOT;
+
+    const buffer = Buffer.from(await res.arrayBuffer());
+    const contentType = res.headers.get("content-type") || "image/jpeg";
+    return `data:${contentType};base64,${buffer.toString("base64")}`;
+  } catch {
+    return PLACEHOLDER_HEADSHOT;
+  }
+}
+
 export async function fetchImageAsDataUrl(url: string): Promise<string> {
   if (url.startsWith("data:")) {
     return url;

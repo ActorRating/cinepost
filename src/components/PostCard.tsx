@@ -1,11 +1,16 @@
 "use client";
 
 import { forwardRef, useState } from "react";
-import html2canvas from "html2canvas";
 import { Copy, Download, Check, RefreshCw } from "lucide-react";
 import { PLACEHOLDER_HEADSHOT } from "@/lib/tmdb";
-import { getProxiedImageUrl, fetchImageAsDataUrl, waitForImage } from "@/lib/image";
+import { getProxiedImageUrl } from "@/lib/image";
+import { renderPostCardPng } from "@/lib/card-export";
 import { stripQuotes } from "@/lib/text";
+
+function resolveHeadshotSrc(url: string): string {
+  if (url.startsWith("data:")) return url;
+  return getProxiedImageUrl(url);
+}
 
 interface PostCardProps {
   actorName: string;
@@ -36,7 +41,7 @@ const PostCard = forwardRef<HTMLDivElement, PostCardProps>(
             <div className="inline-block rounded-2xl overflow-hidden border border-gold/20 bg-cinema-black leading-none">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={getProxiedImageUrl(headshotUrl || PLACEHOLDER_HEADSHOT)}
+                src={resolveHeadshotSrc(headshotUrl || PLACEHOLDER_HEADSHOT)}
                 alt={actorName}
                 className="h-44 sm:h-52 w-auto block"
               />
@@ -71,10 +76,8 @@ export function PostCardActions({
   actorName,
   postText,
   headshotUrl,
-  cardRef,
   onGenerateAnother,
 }: PostCardProps & {
-  cardRef: React.RefObject<HTMLDivElement | null>;
   onGenerateAnother?: () => void;
 }) {
   const [copied, setCopied] = useState(false);
@@ -97,41 +100,12 @@ export function PostCardActions({
   };
 
   const handleDownload = async () => {
-    if (!cardRef.current) return;
     setDownloading(true);
     try {
-      const dataUrl = await fetchImageAsDataUrl(headshotUrl || PLACEHOLDER_HEADSHOT);
-
-      const wrapper = document.createElement("div");
-      wrapper.style.padding = "20px";
-      wrapper.style.background = "#0A0A0F";
-      wrapper.style.display = "inline-block";
-      wrapper.style.position = "fixed";
-      wrapper.style.left = "-9999px";
-      wrapper.style.top = "0";
-
-      const clone = cardRef.current.cloneNode(true) as HTMLElement;
-      const img = clone.querySelector("img");
-      if (img) {
-        img.src = dataUrl;
-        await waitForImage(img);
-      }
-
-      wrapper.appendChild(clone);
-      document.body.appendChild(wrapper);
-
-      const canvas = await html2canvas(wrapper, {
-        backgroundColor: "#0A0A0F",
-        scale: 2,
-        useCORS: true,
-        logging: false,
-      });
-
-      document.body.removeChild(wrapper);
-
+      const png = await renderPostCardPng({ actorName, postText, headshotUrl });
       const link = document.createElement("a");
       link.download = `cinepost-${actorName.toLowerCase().replace(/\s+/g, "-")}.png`;
-      link.href = canvas.toDataURL("image/png");
+      link.href = png;
       link.click();
     } catch (err) {
       console.error("Download failed:", err);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Shuffle, Loader2 } from "lucide-react";
 import PostCard, { PostCardActions } from "@/components/PostCard";
 import UpgradeModal from "@/components/UpgradeModal";
@@ -18,8 +18,12 @@ export default function GeneratePage() {
   const [result, setResult] = useState<GeneratedPost | null>(null);
   const [error, setError] = useState("");
   const [showUpgrade, setShowUpgrade] = useState(false);
-  const [guestRemaining, setGuestRemaining] = useState(getGuestRemaining);
+  const [guestRemaining, setGuestRemaining] = useState<number | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setGuestRemaining(getGuestRemaining());
+  }, []);
 
   const handleRandomActor = () => {
     setActorName(getRandomActor());
@@ -41,7 +45,7 @@ export default function GeneratePage() {
     try {
       const isGuest = !canGuestGenerate() ? false : true;
 
-      if (!isGuest && guestRemaining <= 0) {
+      if (!isGuest && guestRemaining !== null && guestRemaining <= 0) {
         setShowUpgrade(true);
         setLoading(false);
         return;
@@ -92,7 +96,7 @@ export default function GeneratePage() {
           <p className="text-gray-400 text-base sm:text-lg leading-relaxed max-w-lg mx-auto">
             Pick a random actor or enter a name to generate viral content
           </p>
-          {guestRemaining > 0 && (
+          {guestRemaining !== null && guestRemaining > 0 && (
             <p className="text-sm text-gray-500 mt-2">
               {guestRemaining} free generation{guestRemaining !== 1 ? "s" : ""} remaining
             </p>
@@ -168,7 +172,6 @@ export default function GeneratePage() {
               actorName={result.actorName}
               postText={result.postText}
               headshotUrl={result.headshotUrl}
-              cardRef={cardRef}
               onGenerateAnother={handleGenerateAnother}
             />
           </div>

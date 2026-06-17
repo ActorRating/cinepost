@@ -1,7 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { FREE_DAILY_LIMIT, GENERATION_PROMPT, GROQ_MODEL } from "@/lib/constants";
-import { fetchActorHeadshot, PLACEHOLDER_HEADSHOT } from "@/lib/tmdb";
+import { fetchActorHeadshot } from "@/lib/tmdb";
+import { headshotUrlToDataUrl } from "@/lib/image";
+import { isLocalhostRequest } from "@/lib/localhost";
 
 async function generateWithGroq(actorName: string): Promise<string> {
   const apiKey = process.env.GROQ_API_KEY;
@@ -103,7 +105,9 @@ export async function POST(request: NextRequest) {
       data: { user },
     } = await supabase.auth.getUser();
 
-    if (user) {
+    const unlimited = isLocalhostRequest(request.headers.get("host"));
+
+    if (user && !unlimited) {
       const { allowed, plan } = await checkAndIncrementUserLimit(supabase, user.id);
       if (!allowed) {
         return NextResponse.json(
@@ -115,22 +119,24 @@ export async function POST(request: NextRequest) {
           { status: 429 }
         );
       }
-    } else if (!isGuest) {
+    } else if (!user && !isGuest && !unlimited) {
       return NextResponse.json(
         { error: "auth_required", message: "Please sign up to continue generating posts." },
         { status: 401 }
       );
     }
 
-    const [postText, headshotUrl] = await Promise.all([
+    const [postText, tmdbHeadshotUrl] = await Promise.all([
       generateWithGroq(actorName),
       fetchActorHeadshot(actorName),
     ]);
 
+    const headshotUrl = await headshotUrlToDataUrl(tmdbHeadshotUrl);
+
     const result = {
       actorName,
       postText,
-      headshotUrl: headshotUrl || PLACEHOLDER_HEADSHOT,
+      headshotUrl,
     };
 
     if (user) {
@@ -140,7 +146,7 @@ export async function POST(request: NextRequest) {
           user_id: user.id,
           actor_name: actorName,
           post_text: postText,
-          headshot_url: headshotUrl,
+          headshot_url: tmdbHeadshotUrl,
         })
         .select()
         .single();

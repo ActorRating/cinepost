@@ -22,7 +22,9 @@ export async function GET(request: Request) {
   }
 
   try {
-    const res = await fetch(url);
+    const res = await fetch(url, {
+      headers: { "User-Agent": "CinePost/1.0" },
+    });
     if (!res.ok) {
       return NextResponse.json({ error: "Failed to fetch image" }, { status: 502 });
     }
