@@ -203,23 +203,6 @@ export default function HomePage() {
           </div>
         </div>
       </section>
-
-      {/* Footer */}
-      <footer className="border-t border-cinema-border py-8">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-sm text-gray-500">
-            © {new Date().getFullYear()} CinePost. All rights reserved.
-          </p>
-          <div className="flex gap-6 text-sm text-gray-500">
-            <Link href="/pricing" className="hover:text-gold hover-grow inline-block transition-colors">
-              Pricing
-            </Link>
-            <Link href="/generate" className="hover:text-gold hover-grow inline-block transition-colors">
-              Generate
-            </Link>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }

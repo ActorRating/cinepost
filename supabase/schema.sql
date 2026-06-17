@@ -67,6 +67,17 @@ create trigger profiles_updated_at
   before update on public.profiles
   for each row execute procedure public.update_updated_at();
 
+-- Waitlist for paid plan interest
+create table if not exists public.waitlist (
+  id uuid primary key default gen_random_uuid(),
+  email text not null,
+  plan_interested text not null check (plan_interested in ('pro', 'agency')),
+  created_at timestamptz not null default now(),
+  unique (email, plan_interested)
+);
+
+create index if not exists waitlist_email_idx on public.waitlist(email);
+
 -- Row Level Security
 alter table public.profiles enable row level security;
 alter table public.posts enable row level security;

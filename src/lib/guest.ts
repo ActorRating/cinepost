@@ -27,3 +27,8 @@ export function getGuestRemaining(): number | null {
   if (hasUnlimitedGenerations()) return null;
   return Math.max(0, GUEST_LIMIT - getGuestGenerationCount());
 }
+
+export function clearGuestGenerationCount(): void {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(STORAGE_KEY);
+}

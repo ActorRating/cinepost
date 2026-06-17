@@ -9,7 +9,9 @@ import {
   canGuestGenerate,
   incrementGuestGenerationCount,
   getGuestRemaining,
+  clearGuestGenerationCount,
 } from "@/lib/guest";
+import { createClient } from "@/lib/supabase/client";
 import type { GeneratedPost } from "@/types";
 
 export default function GeneratePage() {
@@ -19,10 +21,39 @@ export default function GeneratePage() {
   const [error, setError] = useState("");
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [guestRemaining, setGuestRemaining] = useState<number | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setGuestRemaining(getGuestRemaining());
+    const supabase = createClient();
+
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        clearGuestGenerationCount();
+        setIsAuthenticated(true);
+        setGuestRemaining(null);
+      } else {
+        setIsAuthenticated(false);
+        setGuestRemaining(getGuestRemaining());
+      }
+      setAuthChecked(true);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        clearGuestGenerationCount();
+        setIsAuthenticated(true);
+        setGuestRemaining(null);
+      } else {
+        setIsAuthenticated(false);
+        setGuestRemaining(getGuestRemaining());
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const handleRandomActor = () => {
@@ -38,18 +69,17 @@ export default function GeneratePage() {
       return;
     }
 
+    if (!isAuthenticated && !canGuestGenerate()) {
+      setShowUpgrade(true);
+      return;
+    }
+
     setLoading(true);
     setError("");
     setResult(null);
 
     try {
-      const isGuest = !canGuestGenerate() ? false : true;
-
-      if (!isGuest && guestRemaining !== null && guestRemaining <= 0) {
-        setShowUpgrade(true);
-        setLoading(false);
-        return;
-      }
+      const isGuest = !isAuthenticated;
 
       const res = await fetch("/api/generate", {
         method: "POST",
@@ -96,9 +126,18 @@ export default function GeneratePage() {
           <p className="text-gray-400 text-base sm:text-lg leading-relaxed max-w-lg mx-auto">
             Pick a random actor or enter a name to generate viral content
           </p>
-          {guestRemaining !== null && guestRemaining > 0 && (
+          {authChecked && !isAuthenticated && guestRemaining !== null && guestRemaining > 0 && (
             <p className="text-sm text-gray-500 mt-2">
               {guestRemaining} free generation{guestRemaining !== 1 ? "s" : ""} remaining
+            </p>
+          )}
+          {authChecked && !isAuthenticated && guestRemaining === 0 && (
+            <p className="text-sm text-gold mt-2">
+              Guest limit reached —{" "}
+              <a href="/signup" className="underline hover:text-gold-light">
+                sign up free
+              </a>{" "}
+              to keep generating
             </p>
           )}
         </div>
