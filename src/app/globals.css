@@ -2,26 +2,81 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+:root {
+  --background: #0A0A0F;
+  --foreground: #F5F5F5;
+  --gold: #FFD700;
+  --radius: 16px;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Inter', system-ui, sans-serif;
+  letter-spacing: -0.01em;
 }
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
   }
+
+  .hover-grow {
+    @apply transition-transform duration-300 ease-out hover:scale-105 active:scale-[0.98];
+  }
+}
+
+@layer components {
+  .btn-gold {
+    @apply bg-gold hover:bg-gold-light text-cinema-black font-semibold
+           px-8 py-4 rounded-2xl hover-grow;
+  }
+
+  .btn-outline {
+    @apply border border-cinema-border hover:border-gold/50 text-foreground
+           px-6 py-3 rounded-2xl hover:text-gold backdrop-blur-sm bg-white/5
+           hover-grow;
+  }
+
+  .btn-blue {
+    @apply bg-accent-blue hover:bg-accent-blue-dark text-white font-semibold
+           px-6 py-3 rounded-2xl hover-grow;
+  }
+
+  .btn-dark {
+    @apply bg-cinema-dark hover:bg-cinema-black text-white font-semibold
+           border border-cinema-border px-6 py-3 rounded-2xl hover-grow;
+  }
+
+  .btn-x {
+    @apply bg-black hover:bg-gray-900 text-white font-semibold
+           px-6 py-3 rounded-2xl hover-grow;
+  }
+
+  .card-cinema {
+    @apply bg-cinema-card border border-cinema-border rounded-2xl backdrop-blur-xl;
+  }
+
+  .input-cinema {
+    @apply w-full bg-cinema-dark/80 border border-cinema-border rounded-2xl
+           px-4 py-3.5 text-foreground placeholder:text-gray-500
+           focus:outline-none focus:border-gold/60 focus:ring-1 focus:ring-gold/30
+           transition-all duration-300 backdrop-blur-sm;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #0A0A0F;
+}
+::-webkit-scrollbar-thumb {
+  background: #2A2A3E;
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #FFD700;
 }
