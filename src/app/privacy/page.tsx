@@ -132,7 +132,7 @@ export default function PrivacyPage() {
             <h2 className="text-xl font-semibold text-foreground mb-3">10. Contact</h2>
             <p>
               Questions about this Privacy Policy? Contact us at{" "}
-              <a href="mailto:hello@cinepost.com">hello@cinepost.com</a>.
+              <a href="mailto:demirautomations@gmail.com">demirautomations@gmail.com</a>.
             </p>
           </section>
         </div>

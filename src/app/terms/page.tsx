@@ -119,8 +119,8 @@ export default function TermsPage() {
             <h2 className="text-xl font-semibold text-foreground mb-3">12. Contact</h2>
             <p>
               Questions about these Terms? Contact us at{" "}
-              <a href="mailto:hello@cinepost.com" className="text-gold hover:underline">
-                hello@cinepost.com
+              <a href="mailto:demirautomations@gmail.com" className="text-gold hover:underline">
+                demirautomations@gmail.com
               </a>
               .
             </p>

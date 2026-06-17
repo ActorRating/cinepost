@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Shuffle, Loader2 } from "lucide-react";
 import PostCard, { PostCardActions } from "@/components/PostCard";
-import UpgradeModal from "@/components/UpgradeModal";
+import UpgradeModal, { type UpgradeModalVariant } from "@/components/UpgradeModal";
 import { ACTORS, getRandomActor } from "@/data/actors";
 import {
   canGuestGenerate,
@@ -11,46 +11,89 @@ import {
   getGuestRemaining,
   clearGuestGenerationCount,
 } from "@/lib/guest";
+import { FREE_DAILY_LIMIT } from "@/lib/constants";
 import { createClient } from "@/lib/supabase/client";
 import type { GeneratedPost } from "@/types";
+import type { User } from "@supabase/supabase-js";
+
+type UserPlan = "free" | "pro" | "agency" | null;
 
 export default function GeneratePage() {
   const [actorName, setActorName] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<GeneratedPost | null>(null);
   const [error, setError] = useState("");
-  const [showUpgrade, setShowUpgrade] = useState(false);
+  const [limitModal, setLimitModal] = useState<UpgradeModalVariant | null>(null);
   const [guestRemaining, setGuestRemaining] = useState<number | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userPlan, setUserPlan] = useState<UserPlan>(null);
+  const [generationsToday, setGenerationsToday] = useState<number | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
+
+  const loadUserProfile = async (user: User) => {
+    const supabase = createClient();
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("plan, generations_today, last_generation_date")
+      .eq("id", user.id)
+      .single();
+
+    const today = new Date().toISOString().split("T")[0];
+    const generationsTodayCount =
+      profile?.last_generation_date === today ? profile.generations_today : 0;
+
+    setUserPlan((profile?.plan as UserPlan) ?? "free");
+    setGenerationsToday(generationsTodayCount);
+    return {
+      plan: (profile?.plan as UserPlan) ?? "free",
+      generationsToday: generationsTodayCount,
+    };
+  };
+
+  const showLimitModal = (
+    variant: UpgradeModalVariant,
+    context: {
+      trigger: string;
+      isAuthenticated: boolean;
+      userPlan: UserPlan;
+      generationsToday: number | null;
+    }
+  ) => {
+    console.log("[CinePost] limit modal decision:", {
+      trigger: context.trigger,
+      isAuthenticated: context.isAuthenticated,
+      userPlan: context.userPlan,
+      generationsToday: context.generationsToday,
+      modalVariant: variant,
+    });
+    setLimitModal(variant);
+  };
 
   useEffect(() => {
     const supabase = createClient();
 
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    const handleUser = async (user: User | null) => {
       if (user) {
         clearGuestGenerationCount();
         setIsAuthenticated(true);
         setGuestRemaining(null);
+        await loadUserProfile(user);
       } else {
         setIsAuthenticated(false);
+        setUserPlan(null);
+        setGenerationsToday(null);
         setGuestRemaining(getGuestRemaining());
       }
       setAuthChecked(true);
-    });
+    };
+
+    supabase.auth.getUser().then(({ data: { user } }) => handleUser(user));
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        clearGuestGenerationCount();
-        setIsAuthenticated(true);
-        setGuestRemaining(null);
-      } else {
-        setIsAuthenticated(false);
-        setGuestRemaining(getGuestRemaining());
-      }
+      handleUser(session?.user ?? null);
     });
 
     return () => subscription.unsubscribe();
@@ -69,8 +112,28 @@ export default function GeneratePage() {
       return;
     }
 
+    const limitContext = {
+      trigger: "pre-check",
+      isAuthenticated,
+      userPlan,
+      generationsToday,
+    };
+
     if (!isAuthenticated && !canGuestGenerate()) {
-      setShowUpgrade(true);
+      showLimitModal("guest", { ...limitContext, trigger: "guest-localStorage-exhausted" });
+      return;
+    }
+
+    if (
+      isAuthenticated &&
+      userPlan === "free" &&
+      generationsToday !== null &&
+      generationsToday >= FREE_DAILY_LIMIT
+    ) {
+      showLimitModal("daily_limit", {
+        ...limitContext,
+        trigger: "free-plan-daily-limit-client",
+      });
       return;
     }
 
@@ -90,10 +153,27 @@ export default function GeneratePage() {
       const data = await res.json();
 
       if (!res.ok) {
-        if (data.error === "limit_reached" || data.error === "auth_required") {
-          setShowUpgrade(true);
+        const apiContext = {
+          trigger: `api-error:${data.error}`,
+          isAuthenticated,
+          userPlan: (data.plan as UserPlan) ?? userPlan,
+          generationsToday,
+        };
+
+        if (data.error === "auth_required") {
+          showLimitModal("guest", apiContext);
           return;
         }
+
+        if (data.error === "limit_reached") {
+          if (isAuthenticated) {
+            showLimitModal("daily_limit", apiContext);
+          } else {
+            showLimitModal("guest", apiContext);
+          }
+          return;
+        }
+
         throw new Error(data.message || "Generation failed");
       }
 
@@ -102,6 +182,8 @@ export default function GeneratePage() {
       if (isGuest) {
         incrementGuestGenerationCount();
         setGuestRemaining(getGuestRemaining());
+      } else if (userPlan === "free" && generationsToday !== null) {
+        setGenerationsToday(generationsToday + 1);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
@@ -138,6 +220,12 @@ export default function GeneratePage() {
                 sign up free
               </a>{" "}
               to keep generating
+            </p>
+          )}
+          {authChecked && isAuthenticated && userPlan === "free" && generationsToday !== null && (
+            <p className="text-sm text-gray-500 mt-2">
+              {Math.max(0, FREE_DAILY_LIMIT - generationsToday)} generation
+              {FREE_DAILY_LIMIT - generationsToday !== 1 ? "s" : ""} remaining today
             </p>
           )}
         </div>
@@ -217,7 +305,11 @@ export default function GeneratePage() {
         )}
       </div>
 
-      <UpgradeModal isOpen={showUpgrade} onClose={() => setShowUpgrade(false)} />
+      <UpgradeModal
+        isOpen={limitModal !== null}
+        onClose={() => setLimitModal(null)}
+        variant={limitModal ?? "guest"}
+      />
     </div>
   );
 }
