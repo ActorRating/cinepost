@@ -48,6 +48,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <script
+          defer
+          src="https://cloud.umami.is/script.js"
+          data-website-id="59174959-1b9b-46ea-83f8-90237e7ab7b8"
+        />
+      </head>
       <body className="min-h-screen bg-cinema-black antialiased flex flex-col">
         <Navbar />
         <main className="pt-16 flex-1">{children}</main>
