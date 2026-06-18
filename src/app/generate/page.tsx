@@ -13,6 +13,7 @@ import {
 } from "@/lib/guest";
 import { FREE_DAILY_LIMIT } from "@/lib/constants";
 import { createClient } from "@/lib/supabase/client";
+import { trackEvent } from "@/lib/analytics";
 import type { GeneratedPost } from "@/types";
 import type { User } from "@supabase/supabase-js";
 
@@ -178,6 +179,11 @@ export default function GeneratePage() {
       }
 
       setResult(data);
+
+      trackEvent("generate-post", {
+        actor: name,
+        authenticated: isGuest ? "no" : "yes",
+      });
 
       if (isGuest) {
         incrementGuestGenerationCount();

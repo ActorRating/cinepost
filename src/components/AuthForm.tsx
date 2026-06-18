@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { clearGuestGenerationCount } from "@/lib/guest";
+import { trackEvent } from "@/lib/analytics";
 import { Loader2, Mail } from "lucide-react";
 
 const MIN_PASSWORD_LENGTH = 8;
@@ -69,6 +70,8 @@ export default function AuthForm({ mode }: AuthFormProps) {
           },
         });
         if (error) throw error;
+
+        trackEvent("sign-up");
 
         if (data.session) {
           clearGuestGenerationCount();
